@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ЯНПН · сечения и метод следов в 3D</title>
+<meta name="description" content="ЯНПН: интерактивная стереометрия. Сечения по точкам, метод следов по шагам, тела по координатам и режим псевдоголограммы.">
+<meta name="theme-color" content="#f4f3ef">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:title" content="ЯНПН">
+<meta property="og:image" content="assets/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=PT+Serif:ital,wght@0,400;1,400;1,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#app" aria-label="ЯНПН">
+    <svg class="brand-mark" viewBox="320 270 620 700" aria-hidden="true"><defs><clipPath id="pc"><path d="M398 942L560 492L877 293L715 743Z"/></clipPath></defs><path d="M571 332L571 710M571 710L345 820M571 710L907 815" fill="none" stroke="#19191c" stroke-width="7" stroke-dasharray="22 18" stroke-linecap="round"/><path d="M398 942L560 492L877 293L715 743Z" fill="#38373b"/><path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#19191c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><g clip-path="url(#pc)"><path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#f4f3ef" stroke-width="9" stroke-linecap="round"/></g></svg>
+    <span class="brand-name">ЯНПН</span>
+  </a>
+  <div class="tools" role="toolbar" aria-label="Инструменты">
+    <button class="tool on" data-tool="move" title="Двигать и вращать (V)"><i data-i="move"></i><span>Двигать</span></button>
+    <button class="tool" data-tool="point" title="Новая точка (P)"><i data-i="point"></i><span>Точка</span></button>
+    <button class="tool" data-tool="plane" title="Сечение по трём кликам (C)"><i data-i="cut"></i><span>Сечение</span></button>
+    <button class="tool" data-tool="angle" title="Угол (A)"><i data-i="angle"></i><span>Угол</span></button>
+  </div>
+  <nav class="top-nav" aria-label="Разделы">
+    <a href="#tasks">Задачи</a><a href="#pepper">Голограмма</a><a href="#plan">Проект</a>
+  </nav>
+  <div class="top-actions">
+    <button class="room-pill" id="roomPill" hidden><span class="dot"></span><span id="roomPillText">Комната</span></button>
+    <button class="btn btn-ink" id="openHolo" title="Голограмма (H)"><i data-i="holo"></i><span>Голограмма</span></button>
+  </div>
+</header>
+
+<main>
+<section id="app" class="workspace">
+  <aside class="panel" aria-label="Панель">
+    <div class="tabs" role="tablist">
+      <button role="tab" class="tab on" data-tab="obj">Объекты</button>
+      <button role="tab" class="tab" data-tab="body">Тело</button>
+      <button role="tab" class="tab" data-tab="view">Вид</button>
+      <button role="tab" class="tab" data-tab="room">Комната</button>
+    </div>
+
+    <!-- ОБЪЕКТЫ -->
+    <div class="pane on" data-pane="obj">
+      <div class="sec-card">
+        <div class="sec-row">
+          <span class="math big">α</span>
+          <span class="sec-lbl">через</span>
+          <select class="sec-sel" data-slot="0" aria-label="Первая точка"></select>
+          <select class="sec-sel" data-slot="1" aria-label="Вторая точка"></select>
+          <select class="sec-sel" data-slot="2" aria-label="Третья точка"></select>
+        </div>
+        <div class="sec-state"><span id="secState">сечение: треугольник</span></div>
+        <button class="btn btn-accent wide" id="stepsBtn"><i data-i="steps"></i><span>Построить методом следов</span></button>
+      </div>
+
+      <div class="list-head">
+        <h2>Точки</h2>
+        <div class="list-actions">
+          <button class="btn btn-soft sm" id="addFree" title="Новая точка по координатам"><i data-i="plus"></i>xyz</button>
+          <button class="btn btn-soft sm" id="addEdge" title="Новая точка на прямой ребра"><i data-i="plus"></i>на ребре</button>
+        </div>
+      </div>
+      <form class="cmd" id="cmdForm" autocomplete="off">
+        <span class="cmd-gt" aria-hidden="true">›</span>
+        <input id="cmdIn" placeholder="K = (1; 0; 2)  ·  L = AB 1:2  ·  M = середина BC" aria-label="Ввод точки">
+      </form>
+      <p class="cmd-help" id="cmdHelp">Можно: <code>(x; y; z)</code>, <code>AB 1:2</code>, <code>AB t=1,5</code> (продолжение), <code>середина AC</code>, <code>C1</code>.</p>
+      <ol class="objs" id="objList"></ol>
+
+      <details class="verts" id="vertsBox">
+        <summary>Вершины тела</summary>
+        <dl class="vlist" id="vertList"></dl>
+      </details>
+    </div>
+
+    <!-- ТЕЛО -->
+    <div class="pane" data-pane="body">
+      <div class="fig-grid" id="figGrid"></div>
+
+      <details class="drawer" id="hullBox" open>
+        <summary><b>По точкам</b><small>любой многогранник: вершины по координатам</small></summary>
+        <div class="presets" id="hullPresets"></div>
+        <textarea id="hullText" rows="7" spellcheck="false" aria-label="Вершины тела"></textarea>
+        <p class="hint" id="hullMsg">Каждая строка: имя и координаты. Строится выпуклая оболочка точек.</p>
+        <div class="row-btns">
+          <button class="btn btn-accent" id="hullBuild">Построить</button>
+          <button class="btn btn-soft" id="hullFromPts" title="Взять свободные точки из списка">Из точек списка</button>
+        </div>
+      </details>
+
+      <details class="drawer" id="customBox">
+        <summary><b>Правильное тело</b><small>призма, пирамида, усечённая</small></summary>
+        <div class="seg" id="cType">
+          <button data-v="prism" class="on">Призма</button><button data-v="pyramid">Пирамида</button><button data-v="frustum">Усечённая</button>
+        </div>
+        <label class="field"><span>Углов в основании</span>
+          <span class="stepper"><button type="button" data-d="-1" aria-label="меньше">−</button><output id="cN">6</output><button type="button" data-d="1" aria-label="больше">+</button></span></label>
+        <label class="field"><span>Сторона основания a</span><output id="cAv">2</output><input type="range" id="cA" min="1" max="4" step="0.5" value="2"></label>
+        <label class="field" id="cBRow" hidden><span>Верхняя сторона b</span><output id="cBv">1</output><input type="range" id="cB" min="0.5" max="3.5" step="0.5" value="1"></label>
+        <label class="field"><span>Высота h</span><output id="cHv">3</output><input type="range" id="cH" min="1" max="6" step="0.5" value="3"></label>
+        <button class="btn btn-accent wide" id="cBuild">Построить</button>
+      </details>
+
+      <dl class="facts" id="bodyFacts"></dl>
+    </div>
+
+    <!-- ВИД -->
+    <div class="pane" data-pane="view">
+      <div class="block">
+        <label class="switch"><input type="checkbox" id="cbSec" checked><span></span>Сечение</label>
+        <label class="switch"><input type="checkbox" id="cbPlane"><span></span>Плоскость α целиком</label>
+        <label class="switch"><input type="checkbox" id="cbTrace"><span></span>След ℓ на основании</label>
+        <label class="switch"><input type="checkbox" id="cbExtSec"><span></span>Продолжения сторон сечения</label>
+      </div>
+      <div class="block">
+        <label class="switch"><input type="checkbox" id="cbGrid" checked><span></span>Оси и сетка</label>
+        <label class="switch"><input type="checkbox" id="cbVtx" checked><span></span>Подписи</label>
+        <label class="switch"><input type="checkbox" id="cbDrops" checked><span></span>Проекции точек на основание</label>
+        <label class="switch"><input type="checkbox" id="cbOrigin"><span></span>Начало координат в вершине A</label>
+        <label class="switch"><input type="checkbox" id="cbAuto"><span></span>Автовращение</label>
+      </div>
+      <h3 class="sub">Цвет граней</h3>
+      <p class="hint" id="paintHint">Кликни по грани, чтобы выбрать её.</p>
+      <div class="swatches" id="swatches"></div>
+      <label class="field"><span>Прозрачность</span><output id="alpVal">6%</output><input type="range" id="alpIn" min="0" max="100" value="6"></label>
+      <div class="row-btns">
+        <button class="btn btn-soft" id="btnFace" disabled>Грани</button>
+        <button class="btn btn-soft" id="btnBody">Всему телу</button>
+        <button class="btn btn-ghost" id="btnClear">Сброс</button>
+      </div>
+      <button class="btn btn-soft wide" id="btnExtEdge" disabled><i data-i="extend"></i><span>Продлить выбранное ребро</span></button>
+    </div>
+
+    <!-- КОМНАТА -->
+    <div class="pane" data-pane="room">
+      <p class="hint">Одно устройство создаёт комнату, другие входят по коду или QR. Любое изменение сразу видно везде: планшет стоит в пирамиде, а управляешь с телефона.</p>
+      <div class="room-idle" id="roomIdle">
+        <button class="btn btn-accent wide" id="roomCreate"><i data-i="plus"></i>Создать комнату</button>
+        <div class="join">
+          <input id="roomCode" autocomplete="off" maxlength="6" placeholder="КОД" aria-label="Код комнаты">
+          <button class="btn btn-ink" id="roomJoin">Войти</button>
+        </div>
+      </div>
+      <div class="room-live" id="roomLive" hidden>
+        <div class="room-code-big" id="roomCodeBig">······</div>
+        <canvas id="roomQr" width="184" height="184" aria-label="QR-код"></canvas>
+        <div class="row-btns">
+          <button class="btn btn-soft" id="roomCopy"><i data-i="copy"></i>Ссылка</button>
+          <button class="btn btn-soft" id="roomHoloHere"><i data-i="holo"></i>Голограмма</button>
+          <button class="btn btn-ghost" id="roomLeave">Выйти</button>
+        </div>
+      </div>
+      <p class="room-status" id="roomStatus" role="status">Комната не создана</p>
+    </div>
+  </aside>
+
+  <div class="stage" id="stage">
+    <canvas id="viewCv" aria-label="3D-сцена"></canvas>
+    <div class="hud"><strong id="hudFig">Куб</strong><span id="hudTool">Двигать: тяни фон — вращение, тяни точку — перемещение</span></div>
+    <div class="angle-card" id="angleCard" hidden>
+      <div class="chips" id="anglePicks"></div>
+      <div class="angle-res"><span class="angle-kind" id="angleKind">Выбери два объекта</span><span class="angle-val" id="angleVal">·</span><span class="angle-extra" id="angleExtra"></span></div>
+      <div class="row-btns"><button class="btn btn-soft sm" id="angleSec">+ плоскость α</button><button class="btn btn-ghost sm" id="angleClear">Сброс</button></div>
+    </div>
+    <div class="dock" role="toolbar" aria-label="Вид">
+      <button data-view="iso" title="Изометрия (I)"><i data-i="iso"></i></button>
+      <button data-view="front" title="Спереди (F)"><i data-i="front"></i></button>
+      <button data-view="top" title="Сверху (T)"><i data-i="top"></i></button>
+      <span class="sep"></span>
+      <button id="zDrag" title="Тянуть точки по высоте (Shift)" aria-pressed="false"><i data-i="updown"></i></button>
+      <button id="zoomOut" title="Отдалить"><i data-i="minus"></i></button>
+      <button id="zoomIn" title="Приблизить"><i data-i="plus"></i></button>
+      <span class="sep"></span>
+      <button id="shot" title="Сохранить картинку"><i data-i="camera"></i></button>
+      <button id="stageFull" title="На весь экран"><i data-i="full"></i></button>
+      <button id="inspToggle" class="insp-toggle" title="Измерения"><i data-i="ruler"></i></button>
+    </div>
+    <div class="tip" id="tip" hidden></div>
+
+    <div class="player" id="player" hidden>
+      <div class="pl-top">
+        <div class="pl-ctrl">
+          <button id="stPrev" aria-label="Назад"><i data-i="left"></i></button>
+          <button id="stPlay" aria-label="Автопоказ"><i data-i="play"></i></button>
+          <button id="stNext" class="next" aria-label="Дальше"><i data-i="right"></i></button>
+        </div>
+        <div class="pl-title"><span class="pl-num" id="stNum">1 / 8</span><b id="stTitle">Секущая плоскость</b></div>
+        <button class="pl-x" id="stClose" aria-label="Закрыть шаги">✕</button>
+      </div>
+      <div class="pl-dots" id="stDots"></div>
+      <p class="pl-text" id="stTxt"></p>
+      <p class="pl-why" id="stWhy"></p>
+      <div class="pl-known" id="stKnown"></div>
+    </div>
+  </div>
+
+  <aside class="inspector" id="inspector" aria-label="Измерения">
+    <div class="insp-sec">
+      <span class="eyebrow">Сечение</span>
+      <div class="sec-name" id="iSecName">треугольник</div>
+      <dl class="facts" id="iSec"></dl>
+    </div>
+    <div class="insp-sec" id="iSelBox" hidden>
+      <span class="eyebrow">Выбрано</span>
+      <div class="sel-name" id="iSelName"></div>
+      <dl class="facts" id="iSel"></dl>
+    </div>
+    <div class="insp-sec">
+      <span class="eyebrow">Тело</span>
+      <dl class="facts" id="iBody"></dl>
+    </div>
+  </aside>
+</section>
+
+<section id="tasks" class="sheet">
+  <div class="sheet-head">
+    <span class="eyebrow">Библиотека</span>
+    <h2>Задачи на построение сечений</h2>
+    <p class="lead">Типовые формулировки ЕГЭ и олимпиад. Задача открывается сразу в режиме шагов: смотри построение, двигай точки, проверяй ответ.</p>
+  </div>
+  <div class="seg task-filter" id="taskFilter"></div>
+  <ol class="task-list" id="taskList"></ol>
+</section>
+
+<section id="problem" class="sheet">
+  <div class="sheet-head"><span class="eyebrow">Зачем это</span><h2>Между текстом задачи и объёмом в голове разрыв</h2></div>
+  <div class="prob-grid">
+    <p><b>Плоский чертёж</b>В учебнике тело нарисовано на плоскости, и «достроить» его в голове умеет далеко не каждый десятиклассник.</p>
+    <p><b>Цепочка без права на ошибку</b>Сечение строится шаг за шагом: одна неверная прямая в начале ломает всё построение.</p>
+    <p><b>Мало примеров</b>На доске успеваешь показать 2–3 сечения. Здесь их десятки у одной фигуры, с любой стороны.</p>
+  </div>
+</section>
+
+<section id="pepper" class="sheet">
+  <div class="sheet-head"><span class="eyebrow">Эффект Пеппера</span><h2>Как тело повисает внутри пирамиды</h2></div>
+  <div class="pepper-grid">
+    <div class="prose">
+      <p>Прозрачная грань стоит над экраном под углом 45°. Свет от картинки отражается от неё в глаза, а мозг продолжает луч по прямой, поэтому изображение кажется висящим в центре пирамиды.</p>
+      <p>У пирамиды четыре грани, и каждая отражает свою четверть экрана. Режим «Голограмма» раскладывает тело на четыре проекции с поворотом на 90°: зрители вокруг видят его с разных сторон.</p>
+      <p>Пирамиду ставим узкой стороной в центр экрана, верхний свет выключаем, яркость на максимум.</p>
+    </div>
+    <svg class="pepper-svg" viewBox="0 0 420 260" role="img" aria-label="Схема эффекта Пеппера">
+      <line x1="20" y1="220" x2="400" y2="220" class="ps-screen"/>
+      <text x="24" y="244" class="ps-cap">ЭКРАН</text>
+      <path d="M150 220 L90 60 M270 220 L330 60" class="ps-glass"/>
+      <path d="M210 214 l-8 -12 h16z" class="ps-obj"/>
+      <path d="M210 205 L126 158 L40 158" class="ps-ray"/>
+      <circle cx="30" cy="158" r="7" class="ps-eye"/>
+      <path d="M210 158 l-8 -12 h16z" class="ps-ghost"/>
+      <text x="228" y="150" class="ps-cap acc">МНИМОЕ ИЗОБРАЖЕНИЕ</text>
+      <text x="100" y="130" class="ps-cap">45°</text>
+      <text x="16" y="186" class="ps-cap">ГЛАЗ</text>
+    </svg>
+  </div>
+  <div class="calc">
+    <div class="calc-head"><h3>Пирамида своими руками</h3><p>При наклоне 45° высота жёстко связана с основаниями: h = (a − b) / 2.</p></div>
+    <div class="calc-in">
+      <label class="field"><span>Низ a, мм</span><input type="number" id="pA" value="120" min="40" max="400"></label>
+      <label class="field"><span>Верх b, мм</span><input type="number" id="pB" value="20" min="5" max="200"></label>
+    </div>
+    <dl class="calc-out">
+      <div><dt>Высота пирамиды</dt><dd id="pH">·</dd></div>
+      <div><dt>Боковая сторона трапеции</dt><dd id="pL">·</dd></div>
+      <div><dt>Экран не меньше</dt><dd id="pS">·</dd></div>
+    </dl>
+    <div class="row-btns col">
+      <button class="btn btn-ink" id="pSvg"><i data-i="download"></i>Шаблон SVG</button>
+      <button class="btn btn-soft" id="pTry"><i data-i="holo"></i>Проверить в пирамиде</button>
+    </div>
+    <p class="hint">Материал: ПЭТ, оргстекло, крышка от CD-бокса. Стыки на прозрачный скотч, комнату затемнить.</p>
+  </div>
+</section>
+
+<section id="plan" class="sheet">
+  <div class="sheet-head"><span class="eyebrow">Проект</span><h2>План реализации</h2></div>
+  <ol class="timeline">
+    <li class="done"><b>Исследование</b><span>Аналоги (GeoGebra 3D, Desmos 3D, голопирамиды), список функций, выбор стека.</span><em>готово</em></li>
+    <li class="done"><b>Программный прототип</b><span>Тела и тела по точкам, координаты, сечения, метод следов, углы.</span><em>этот сайт</em></li>
+    <li class="now"><b>Аппаратная часть</b><span>Расчёт пирамиды под экран, изготовление, тест яркости и контраста.</span><em>в работе</em></li>
+    <li class="now"><b>Интеграция</b><span>4 проекции под грани, общий экран по коду и QR, библиотека задач.</span><em>почти готово</em></li>
+    <li><b>Апробация</b><span>Эксперимент на одноклассниках против контрольной группы.</span><em>план</em></li>
+    <li><b>Защита</b><span>Отчёт, видео работы прибора, выступление на конференции.</span><em>план</em></li>
+  </ol>
+  <div class="plan-cols">
+    <div>
+      <h3 class="sub">Чек-лист · <span id="chkCount">0 / 5</span></h3>
+      <ul class="checklist" id="checklist">
+        <li><label><input type="checkbox"><span>Склеить пирамиду из ПЭТ или CD-бокса и проверить эффект</span></label></li>
+        <li><label><input type="checkbox"><span>Рассчитать размеры под свой экран и скачать шаблон</span></label></li>
+        <li><label><input type="checkbox"><span>Прогнать 3–4 задачи из библиотеки с учителем математики</span></label></li>
+        <li><label><input type="checkbox"><span>Снять видео голограммы в темноте для отчёта</span></label></li>
+        <li><label><input type="checkbox"><span>Показать прототип 5 одноклассникам и собрать вопросы</span></label></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="sub">Что измерять на апробации</h3>
+      <ul class="plain">
+        <li>Время решения задачи на построение сечения</li>
+        <li>Число ошибок: эксперимент против контрольной группы</li>
+        <li>Тест «до» и «после» на пространственное мышление</li>
+        <li>Субъективная сложность по шкале 1–5</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="foot-brand">
+    <svg class="foot-mark" viewBox="320 270 620 700" aria-hidden="true"><defs><clipPath id="pc2"><path d="M398 942L560 492L877 293L715 743Z"/></clipPath></defs><path d="M571 332L571 710M571 710L345 820M571 710L907 815" fill="none" stroke="#19191c" stroke-width="7" stroke-dasharray="22 18" stroke-linecap="round"/><path d="M398 942L560 492L877 293L715 743Z" fill="#38373b"/><path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#19191c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><g clip-path="url(#pc2)"><path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#f4f3ef" stroke-width="9" stroke-linecap="round"/></g></svg>
+    <div><b>ЯНПН</b><span>«Я Наглядно Понимаю Неочевидное»</span></div>
+  </div>
+  <p>Учебный проект по стереометрии · 10 класс · сечения, метод следов, псевдоголограмма</p>
+  <p class="keys">V двигать · P точка · C сечение · A угол · S шаги · ← → шаг · H голограмма · R сброс вида · 1–8 тела</p>
+</footer>
+
+<div class="holo" id="holo" hidden>
+  <canvas id="holoCv"></canvas>
+  <div class="holo-ui" id="holoUi">
+    <button class="holo-close" id="holoClose">Закрыть · Esc</button>
+    <button class="holo-gear" id="holoGear" aria-expanded="false"><i data-i="sliders"></i>Настройки</button>
+    <div class="holo-panel" id="holoPanel" hidden>
+      <div class="seg dark" id="hMode"><button data-v="4" class="on">4 грани</button><button data-v="3">3 грани</button><button data-v="1">1 грань</button></div>
+      <label class="field"><span>Размер</span><input type="range" id="hSize" min="0.4" max="1.8" step="0.05"></label>
+      <label class="field"><span>Отступ от центра</span><input type="range" id="hGap" min="0" max="0.4" step="0.01"></label>
+      <label class="field"><span>Наклон камеры</span><input type="range" id="hPitch" min="-1.2" max="0.3" step="0.02"></label>
+      <label class="field"><span>Вращение</span><input type="range" id="hSpin" min="0" max="1.5" step="0.05"></label>
+      <label class="field"><span>Толщина линий</span><input type="range" id="hLine" min="0.6" max="4" step="0.1"></label>
+      <label class="field"><span>Свечение</span><input type="range" id="hGlow" min="0" max="30" step="1"></label>
+      <div class="holo-colors" id="hColors"></div>
+      <label class="switch dark"><input type="checkbox" id="hMirror"><span></span>Зеркалить (для отражения)</label>
+      <label class="switch dark"><input type="checkbox" id="hFlip"><span></span>Верх к центру</label>
+      <label class="switch dark"><input type="checkbox" id="hFill"><span></span>Заливка граней</label>
+      <label class="switch dark"><input type="checkbox" id="hLabels"><span></span>Подписи</label>
+      <label class="switch dark"><input type="checkbox" id="hCenter"><span></span>Метка центра</label>
+      <button class="btn btn-ghost dark wide" id="hReset">Сбросить настройки</button>
+    </div>
+    <p class="holo-hint">Тяни, чтобы повернуть · щипок или колесо: размер</p>
+  </div>
+</div>
+
+<div class="join-sheet" id="joinSheet" hidden>
+  <div class="join-card">
+    <span class="eyebrow">Комната <b id="joinCode"></b></span>
+    <h3 id="joinTitle">Подключаемся…</h3>
+    <p>Как использовать это устройство?</p>
+    <button class="btn btn-accent wide" id="joinHolo"><i data-i="holo"></i>Показывать голограмму</button>
+    <button class="btn btn-soft wide" id="joinRemote"><i data-i="hand"></i>Управлять сценой</button>
+  </div>
+</div>
+
+<div class="ctx" id="ctx" hidden><div class="ctx-title" id="ctxTitle"></div><dl class="facts" id="ctxBody"></dl><div class="ctx-actions" id="ctxActions"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
+<script src="js/vec.js" defer></script>
+<script src="js/qr.js" defer></script>
+<script src="js/figures.js" defer></script>
+<script src="js/section.js" defer></script>
+<script src="js/render.js" defer></script>
+<script src="js/room.js" defer></script>
+<script src="js/holo.js" defer></script>
+<script src="js/app.js" defer></script>
+</body>
+</html>

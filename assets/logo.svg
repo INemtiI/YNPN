@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="250 220 760 780">
+<defs><clipPath id="pc"><path d="M398 942L560 492L877 293L715 743Z"/></clipPath></defs>
+<path d="M571 332L571 710M571 710L345 820M571 710L907 815" fill="none" stroke="#19191c" stroke-width="7" stroke-dasharray="22 18" stroke-linecap="round"/>
+<path d="M398 942L560 492L877 293L715 743Z" fill="#38373b"/>
+<path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#19191c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<g clip-path="url(#pc)"><path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#f4f3ef" stroke-width="9" stroke-linecap="round"/></g>
+</svg>
