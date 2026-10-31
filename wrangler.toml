@@ -1,0 +1,11 @@
+name = "ynpn-sync"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "RoomServer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomServer"]
