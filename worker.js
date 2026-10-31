@@ -46,6 +46,7 @@ export class RoomServer {
   async webSocketClose(ws) {
     try { ws.close(); } catch (_) {}
     const count = Math.max(0, this.ctx.getWebSockets().filter(s => s !== ws).length);
+    if (!count) await this.ctx.storage.delete("scene");
     this.broadcast({kind:"peers", count}, ws);
   }
   async webSocketError(ws) { try { ws.close(); } catch (_) {} }
