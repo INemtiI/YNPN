@@ -4,7 +4,8 @@ const Room=(()=>{
   const SERVER='wss://ynpn-sync.rodionovazarij.workers.dev';
   const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const h={}; let ws=null,role=null,code='',count=0,opened=false,stopped=true;
-  let reconnectTimer=0, connectTimer=0, attempt=0, generation=0, hasOpened=false;
+  let reconnectTimer=0, connectTimer=0, sendTimer=0, pending=null, lastSent=0;
+  let attempt=0, generation=0, hasOpened=false;
   const emit=(ev,...a)=>h[ev]&&h[ev](...a);
   const status=(t,k='')=>emit('status',t,k);
   const clean=c=>String(c||'').toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,12);
@@ -38,11 +39,11 @@ const Room=(()=>{
       if(!hasOpened&&create&&attempt>=2){status('Не удалось создать комнату. Проверь доступ к серверу и интернет.','error');return;}
       attempt++;
       status('Связь прервалась. Пробуем подключиться снова…','error');
-      reconnectTimer=setTimeout(()=>connect(role==='host'&&!hasOpened),Math.min(1000*2**Math.min(attempt,4),15000));
+      reconnectTimer=setTimeout(()=>connect(role==='host'&&(!hasOpened||attempt%2===0)),Math.min(1000*2**Math.min(attempt,4),15000));
     };
   }
   function leave(silent=false){
-    stopped=true;generation++;clearTimeout(connectTimer);clearTimeout(reconnectTimer);
+    stopped=true;generation++;clearTimeout(connectTimer);clearTimeout(reconnectTimer);clearTimeout(sendTimer);pending=null;lastSent=0;
     if(ws)try{ws.close();}catch(_){} ws=null;opened=false;hasOpened=false;role=null;code='';count=0;attempt=0;
     if(!silent){status('Комната не создана');emit('change');}
   }
@@ -51,7 +52,15 @@ const Room=(()=>{
     const c=clean(raw);if(c.length!==12){status('Код комнаты должен содержать 12 символов. Создай новую комнату.','error');return;}
     leave(true);role='guest';code=c;stopped=false;connect(false);emit('change');
   }
-  function send(d){if(opened&&ws?.readyState===WebSocket.OPEN&&d?.type==='scene')try{ws.send(JSON.stringify(d));}catch(_){}}
+  function send(d){
+    if(!opened||ws?.readyState!==WebSocket.OPEN||d?.type!=='scene')return;
+    pending=d;
+    const flush=()=>{sendTimer=0;if(!pending||!opened||ws?.readyState!==WebSocket.OPEN)return;
+      try{ws.send(JSON.stringify(pending));lastSent=Date.now();}catch(_){} pending=null;};
+    const delay=Math.max(0,150-(Date.now()-lastSent));
+    if(!delay){clearTimeout(sendTimer);flush();}
+    else if(!sendTimer)sendTimer=setTimeout(flush,delay);
+  }
   return {on:(ev,fn)=>{h[ev]=fn;},create,join,leave:()=>leave(false),send,sendTo:(_,d)=>send(d),
     get role(){return role;},get code(){return code;},get count(){return count;},
     get active(){return !!role;},get connected(){return opened;},clean};
