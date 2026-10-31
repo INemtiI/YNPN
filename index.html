@@ -3,18 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ЯНПН · сечения и метод следов в 3D</title>
+<title>Я Не Придумал Название · 3D-визуализатор</title>
 <meta name="description" content="ЯНПН: интерактивная стереометрия. Сечения по точкам, метод следов по шагам, тела по координатам и режим псевдоголограммы.">
 <meta name="theme-color" content="#f4f3ef">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta property="og:title" content="ЯНПН">
+<meta property="og:title" content="Я Не Придумал Название">
 <meta property="og:image" content="assets/icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=PT+Serif:ital,wght@0,400;1,400;1,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<style>
+/* Разделы временно скрыты, а не удалены: их элементы ещё нужны скриптам. */
+#tasks[hidden], #problem[hidden], #pepper[hidden], #plan[hidden], .top-nav[hidden] { display: none !important; }
+</style>
 </head>
 <body>
 
@@ -29,7 +33,7 @@
     <button class="tool" data-tool="plane" title="Сечение по трём кликам (C)"><i data-i="cut"></i><span>Сечение</span></button>
     <button class="tool" data-tool="angle" title="Угол (A)"><i data-i="angle"></i><span>Угол</span></button>
   </div>
-  <nav class="top-nav" aria-label="Разделы">
+  <nav class="top-nav" aria-label="Разделы" hidden>
     <a href="#tasks">Задачи</a><a href="#pepper">Голограмма</a><a href="#plan">Проект</a>
   </nav>
   <div class="top-actions">
@@ -221,7 +225,7 @@
   </aside>
 </section>
 
-<section id="tasks" class="sheet">
+<section id="tasks" class="sheet" hidden>
   <div class="sheet-head">
     <span class="eyebrow">Библиотека</span>
     <h2>Задачи на построение сечений</h2>
@@ -231,7 +235,7 @@
   <ol class="task-list" id="taskList"></ol>
 </section>
 
-<section id="problem" class="sheet">
+<section id="problem" class="sheet" hidden>
   <div class="sheet-head"><span class="eyebrow">Зачем это</span><h2>Между текстом задачи и объёмом в голове разрыв</h2></div>
   <div class="prob-grid">
     <p><b>Плоский чертёж</b>В учебнике тело нарисовано на плоскости, и «достроить» его в голове умеет далеко не каждый десятиклассник.</p>
@@ -240,7 +244,7 @@
   </div>
 </section>
 
-<section id="pepper" class="sheet">
+<section id="pepper" class="sheet" hidden>
   <div class="sheet-head"><span class="eyebrow">Эффект Пеппера</span><h2>Как тело повисает внутри пирамиды</h2></div>
   <div class="pepper-grid">
     <div class="prose">
@@ -280,7 +284,7 @@
   </div>
 </section>
 
-<section id="plan" class="sheet">
+<section id="plan" class="sheet" hidden>
   <div class="sheet-head"><span class="eyebrow">Проект</span><h2>План реализации</h2></div>
   <ol class="timeline">
     <li class="done"><b>Исследование</b><span>Аналоги (GeoGebra 3D, Desmos 3D, голопирамиды), список функций, выбор стека.</span><em>готово</em></li>
@@ -317,7 +321,7 @@
 <footer class="foot">
   <div class="foot-brand">
     <svg class="foot-mark" viewBox="320 270 620 700" aria-hidden="true"><defs><clipPath id="pc2"><path d="M398 942L560 492L877 293L715 743Z"/></clipPath></defs><path d="M571 332L571 710M571 710L345 820M571 710L907 815" fill="none" stroke="#19191c" stroke-width="7" stroke-dasharray="22 18" stroke-linecap="round"/><path d="M398 942L560 492L877 293L715 743Z" fill="#38373b"/><path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#19191c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><g clip-path="url(#pc2)"><path d="M345 445L571 332M571 332L907 425M907 425L707 545M707 545L345 445M345 445L345 820M707 545L707 937M907 425L907 815M345 820L707 937M707 937L907 815" fill="none" stroke="#f4f3ef" stroke-width="9" stroke-linecap="round"/></g></svg>
-    <div><b>ЯНПН</b><span>«Я Наглядно Понимаю Неочевидное»</span></div>
+    <div><b>ЯНПН</b><span>«Я Не Придумал Название»</span></div>
   </div>
   <p>Учебный проект по стереометрии · 10 класс · сечения, метод следов, псевдоголограмма</p>
   <p class="keys">V двигать · P точка · C сечение · A угол · S шаги · ← → шаг · H голограмма · R сброс вида · 1–8 тела</p>
