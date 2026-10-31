@@ -1,107 +1,58 @@
 'use strict';
-/* ===== общие комнаты на PeerJS (WebRTC) =====
-   Хост создаёт peer с id по коду комнаты, гости подключаются к нему.
-   Хост пересылает сообщения каждого гостя остальным, поэтому управлять можно с любого устройства. */
+/* Rooms use an encrypted WebSocket relay. All participants can edit. */
 const Room=(()=>{
-  const PREFIX='hologran-v2-';
+  const SERVER='wss://ynpn-sync.rodionovazarij.workers.dev';
   const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const OPTS={debug:0,config:{iceServers:[
-    {urls:'stun:stun.l.google.com:19302'},
-    {urls:'stun:stun1.l.google.com:19302'},
-    {urls:'stun:global.stun.twilio.com:3478'}
-  ]}};
-  let peer=null,conns=[],role=null,code='',retries=0,joinTimer=0;
-  const h={};
+  const h={}; let ws=null,role=null,code='',count=0,opened=false,stopped=true;
+  let reconnectTimer=0, connectTimer=0, attempt=0, generation=0, hasOpened=false;
   const emit=(ev,...a)=>h[ev]&&h[ev](...a);
   const status=(t,k='')=>emit('status',t,k);
-  const rand=()=>Array.from({length:6},()=>ALPH[Math.floor(Math.random()*ALPH.length)]).join('');
-  const clean=c=>String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
-
-  function ready(){
-    if(window.Peer)return true;
-    status('Не загрузилась библиотека связи PeerJS. Проверь интернет или блокировщик рекламы.','error');
-    return false;
-  }
-  function attach(conn){
-    conn.on('open',()=>{
-      clearTimeout(joinTimer);
-      if(!conns.includes(conn))conns.push(conn);
-      emit('change');
-      if(role==='host'){status(`Комната ${code} · подключено устройств: ${conns.length}`,'ready');emit('peer-joined',conn);}
-      else{status(`Подключено к комнате ${code}`,'ready');emit('joined');}
-    });
-    conn.on('data',d=>{
-      if(role==='host')conns.forEach(c=>{if(c!==conn&&c.open)c.send(d);});
-      emit('data',d,conn);
-    });
-    const drop=()=>{
-      const had=conns.includes(conn);
-      conns=conns.filter(c=>c!==conn);
-      if(!had)return;
-      emit('change');
-      if(role==='host')status(conns.length?`Комната ${code} · подключено устройств: ${conns.length}`:`Комната ${code} · ждём подключения…`,'ready');
-      else status('Связь с комнатой потеряна. Попробуй войти снова.','error');
+  const clean=c=>String(c||'').toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,12);
+  function rand(){const b=new Uint8Array(12);crypto.getRandomValues(b);return Array.from(b,x=>ALPH[x%ALPH.length]).join('');}
+  function connect(create){
+    const g=++generation; opened=false;
+    status(attempt?'Связь прервалась, переподключаемся…':'Подключаемся к комнате…');
+    let s; try{s=new WebSocket(SERVER+'/room/'+code+(create?'?create=1':''));}
+    catch(e){status('Не удалось открыть соединение с сервером.','error');return;}
+    ws=s;
+    clearTimeout(connectTimer);
+    connectTimer=setTimeout(()=>{if(g===generation&&!opened)try{s.close();}catch(e){}},12000);
+    s.onmessage=e=>{
+      if(g!==generation)return; let m;try{m=JSON.parse(e.data);}catch(_){return;}
+      if(m.kind==='welcome'){
+        clearTimeout(connectTimer);opened=true;hasOpened=true;attempt=0;count=m.count||0;
+        status(`Комната ${code} · устройств: ${count+1}`,'ready');emit('change');
+        if(m.scene)emit('data',m.scene);
+        if(role==='host'&&!m.scene)emit('peer-joined',null);
+        else if(role==='guest')emit('joined');
+      }else if(m.kind==='peers'){
+        count=Math.max(0,(m.count||1)-1);
+        status(`Комната ${code} · устройств: ${count+1}`,'ready');emit('change');
+      }else if(m.kind==='scene'&&m.scene)emit('data',m.scene);
     };
-    conn.on('close',drop);
-    conn.on('error',drop);
+    s.onerror=()=>{};
+    s.onclose=()=>{
+      if(g!==generation||stopped)return;
+      clearTimeout(connectTimer);opened=false;count=0;emit('change');
+      if(!hasOpened&&!create){status('Не удалось войти. Проверь код, интернет и что хотя бы одно устройство уже в комнате.','error');return;}
+      if(!hasOpened&&create&&attempt>=2){status('Не удалось создать комнату. Проверь доступ к серверу и интернет.','error');return;}
+      attempt++;
+      status('Связь прервалась. Пробуем подключиться снова…','error');
+      reconnectTimer=setTimeout(()=>connect(role==='host'&&!hasOpened),Math.min(1000*2**Math.min(attempt,4),15000));
+    };
   }
-  function onError(err){
-    const t=err&&err.type;
-    if(t==='unavailable-id'&&role==='host'&&retries<3){retries++;create(true);return;}
-    const msg={
-      'peer-unavailable':'Комната с таким кодом не найдена. Проверь код: возможно, хост закрыл вкладку.',
-      'network':'Нет связи с сервером комнат. Проверь интернет.',
-      'server-error':'Сервер комнат недоступен, попробуй через минуту.',
-      'browser-incompatible':'Этот браузер не поддерживает WebRTC.',
-      'socket-error':'Соединение с сервером прервалось.',
-      'disconnected':'Соединение с сервером прервалось.'
-    }[t]||'Не удалось подключиться: '+(err&&err.message||t||'неизвестная ошибка');
-    status(msg,'error');
-    if(role==='guest'||t==='browser-incompatible'){leave(true);}
-    emit('change');
-  }
-  function bindPeer(){
-    peer.on('error',onError);
-    peer.on('disconnected',()=>{try{if(peer&&!peer.destroyed)peer.reconnect();}catch(e){}});
-  }
-  function create(isRetry){
-    if(!ready())return;
-    if(!isRetry){leave(true);retries=0;}
-    else if(peer){try{peer.destroy();}catch(e){}}
-    code=rand();role='host';
-    status('Создаём комнату…');
-    peer=new Peer(PREFIX+code,OPTS);
-    bindPeer();
-    peer.on('open',()=>{status(`Комната ${code} · ждём подключения…`,'ready');emit('change');});
-    peer.on('connection',attach);
-    emit('change');
-  }
-  function join(raw){
-    if(!ready())return;
-    const c=clean(raw);
-    if(c.length<6){status('Код комнаты: 6 символов.','error');return;}
-    leave(true);
-    code=c;role='guest';
-    status(`Подключаемся к ${code}…`);
-    peer=new Peer(OPTS);
-    bindPeer();
-    peer.on('open',()=>{attach(peer.connect(PREFIX+code,{reliable:true,serialization:'json'}));});
-    clearTimeout(joinTimer);
-    joinTimer=setTimeout(()=>{if(role==='guest'&&!conns.length){status('Не получилось подключиться за 15 секунд. Проверь код и что оба устройства в интернете.','error');leave(true);emit('change');}},15000);
-    emit('change');
-  }
-  function leave(silent){
-    clearTimeout(joinTimer);
-    conns.forEach(c=>{try{c.close();}catch(e){}});conns=[];
-    if(peer){try{peer.destroy();}catch(e){}}
-    peer=null;role=null;code='';
+  function leave(silent=false){
+    stopped=true;generation++;clearTimeout(connectTimer);clearTimeout(reconnectTimer);
+    if(ws)try{ws.close();}catch(_){} ws=null;opened=false;hasOpened=false;role=null;code='';count=0;attempt=0;
     if(!silent){status('Комната не создана');emit('change');}
   }
-  function send(obj){conns.forEach(c=>{if(c.open)try{c.send(obj);}catch(e){}});}
-  function sendTo(c,obj){if(c&&c.open)try{c.send(obj);}catch(e){}}
-  return{
-    on:(ev,fn)=>{h[ev]=fn;},create:()=>create(false),join,leave:()=>leave(false),send,sendTo,
-    get role(){return role;},get code(){return code;},get count(){return conns.length;},
-    get active(){return !!role;},get connected(){return conns.length>0;},clean
-  };
+  function create(){leave(true);role='host';code=rand();stopped=false;connect(true);emit('change');}
+  function join(raw){
+    const c=clean(raw);if(c.length!==12){status('Код комнаты должен содержать 12 символов. Создай новую комнату.','error');return;}
+    leave(true);role='guest';code=c;stopped=false;connect(false);emit('change');
+  }
+  function send(d){if(opened&&ws?.readyState===WebSocket.OPEN&&d?.type==='scene')try{ws.send(JSON.stringify(d));}catch(_){}}
+  return {on:(ev,fn)=>{h[ev]=fn;},create,join,leave:()=>leave(false),send,sendTo:(_,d)=>send(d),
+    get role(){return role;},get code(){return code;},get count(){return count;},
+    get active(){return !!role;},get connected(){return opened;},clean};
 })();
